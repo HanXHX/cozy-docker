@@ -17,7 +17,6 @@ RUN echo "deb http://ppa.launchpad.net/nginx/stable/ubuntu trusty main" >> /etc/
   libxml2-dev \
   libxslt1-dev \
   lsof \
-  nginx \
   postfix \
   pwgen \
   python-dev \
@@ -99,20 +98,6 @@ RUN su - couchdb -c 'couchdb -b' \
  && cozy-monitor install home \
  && cozy-monitor install proxy
 
-# Generate an SSL certificate and the DH parameter.
-RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout /etc/cozy/server.key -out /etc/cozy/server.crt -days 365 -subj '/CN=localhost' \
- && openssl dhparam -out /etc/cozy/dh2048.pem -outform PEM -2 2048 \
- && chown cozy:cozy /etc/cozy/server.key \
- && chmod 600 /etc/cozy/server.key
-
-# Configure Nginx and check its configuration by restarting the service.
-ADD nginx/nginx.conf /etc/nginx/nginx.conf
-ADD nginx/cozy.conf /etc/nginx/sites-available/cozy.conf
-RUN chmod 0644 /etc/nginx/sites-available/cozy.conf \
- && rm /etc/nginx/sites-enabled/default \
- && ln -s /etc/nginx/sites-available/cozy.conf /etc/nginx/sites-enabled/cozy.conf
-RUN nginx -t
-
 # Configure Postfix with default parameters.
 # TODO: Change mydomain.net?
 RUN echo "postfix postfix/mailname string mydomain.net" | debconf-set-selections \
@@ -124,7 +109,6 @@ RUN echo "postfix postfix/mailname string mydomain.net" | debconf-set-selections
 ADD supervisor/cozy-controller.conf /etc/supervisor/conf.d/cozy-controller.conf
 ADD supervisor/cozy-indexer.conf /etc/supervisor/conf.d/cozy-indexer.conf
 ADD supervisor/couchdb.conf /etc/supervisor/conf.d/couchdb.conf
-ADD supervisor/nginx.conf /etc/supervisor/conf.d/nginx.conf
 ADD supervisor/postfix.conf /etc/supervisor/conf.d/postfix.conf
 RUN chmod 0644 /etc/supervisor/conf.d/*
 
@@ -132,7 +116,7 @@ RUN chmod 0644 /etc/supervisor/conf.d/*
 RUN apt-get clean \
  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-EXPOSE 80 443
+EXPOSE 9104 
 
 VOLUME ["/usr/local/var/lib/couchdb", "/etc/cozy", "/usr/local/cozy"]
 
